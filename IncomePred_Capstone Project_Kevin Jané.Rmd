@@ -1,0 +1,487 @@
+---
+title: "Predicting Income - HarvardX Capstone Project"
+author: "Kevin Jané"
+date: "2022"
+output:
+  bookdown::pdf_document2:
+    keep_tex: true
+    number_sections: true
+    toc: true
+    toc_depth: 3
+    latex_engine: lualatex
+  rmarkdown::pdf_document:
+     keep_tex: true
+     number_sections: true
+     toc: true
+     toc_depth: 3
+     latex_engine: xelatex
+documentclass: report
+fontsize: 12pt
+links-as-notes: true
+linkcolor: blue
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, cache=TRUE, cache.lazy = FALSE, warning = FALSE)
+```
+
+\newpage
+# Preface - Introduction
+
+The purpose of this capstone project is to create a predictive project to achieve the
+[Professional Certificate of the Data Science](https://www.edx.org/es/professional-certificate/harvardx-data-science) 
+courses taught by Harvard University.
+
+The data science job market is exponentially growing being in the 
+[top 3 of jobs most sought after](https://www.forbes.com/sites/forbeshumanresourcescouncil/2021/05/20/hr-leaders-share-14-in-demand-skills-employers-want-in-2021/?sh=44ba748d1e45), 
+this can allow us to infer that the world is giving so much importance to open data than 
+it was years ago, recognizing the potential of data analysis and prediction models for 
+the global social-economic development.
+
+I as an undergraduate economics student, being passionate about data, being able to manipulate 
+data with R facilitates doing data analyses. 
+Also, predictive models are essential to our, which become more time-efficient with R.
+
+My lovely small country, Paraguay, in the center of South America, also called the "heart of South America".
+A country that has been growing these last years, but the needing of data, people who analyse the data and who
+investigate the behavior of the economy and everything that is going on in the country, created the my love for 
+the data analysis.
+
+
+In this project well going to use the [1994 Census Income Data Set](http://www.census.gov/ftp/pub/DES/www/welcome.html), 
+that is a dataset donated by Ronny Kohavi and Barry Becker and provided by the UCI Machine Learning Repository.
+One variable is related with income, our goal in this project is trying to predict the income based on data from the Census database.
+
+\newpage
+# Exploratory Data Analysis
+## Data Preparation
+In this section, we install and load every packages required for this project, as well as the 1994 Census database provided.
+
+```{r, warning=FALSE, message=FALSE}
+if(!require(randomForest)) install.packages("randomForest")
+if(!require(reldist)) install.packages("reldist")
+if(!require(readxl)) install.packages("readxl")
+if(!require(dplyr)) install.packages("dplyr")
+if(!require(tidyr)) install.packages("tidyr")
+if(!require(dslabs)) install.packages("dslabs")
+if(!require(stringr)) install.packages("stringr")
+if(!require(forcats)) install.packages("forcats")
+if(!require(ggplot2)) install.packages("ggplot2")
+if(!require(caTools)) install.packages("caTools")
+if(!require(rpart.plot)) install.packages("rpart.plot")
+if(!require(ISLR)) install.packages("ISLR")
+if(!require(e1071)) install.packages("e1071")
+if(!require(OneR)) install.packages("OneR")
+if(!require(tidyverse)) install.packages("tidyverse", 
+                                         repos = "http://cran.us.r-project.org")
+if(!require(ggthemes)) install.packages("ggthemes", 
+                                        repos="http://cran.us.r-project.org")
+if(!require(caret)) install.packages("caret", 
+                                     repos = "http://cran.us.r-project.org")
+if(!require(data.table)) install.packages("data.table", 
+                                          repos = "http://cran.us.r-project.org")
+if(!require(rpart)) install.packages("rpart", 
+                                     repos="http://cran.us.r-project.org")
+if(!require(MLmetrics)) install.packages("MLmetrics", 
+                                         repos="http://cran.us.r-project.org")
+if(!require(haven)) install.packages("haven", 
+                                     repos="http://cran.us.r-project.org")
+```
+
+```{r, warning=FALSE, message=FALSE}
+library(randomForest)
+library(reldist)
+library(readxl)
+library(dplyr)
+library(tidyr)
+library(dslabs)
+library(stringr)
+library(forcats)
+library(ggplot2)
+library(tidyverse)
+library(OneR)
+library(caret)
+library(data.table)
+library(ggthemes)
+library(caTools)
+library(rpart)
+library(ISLR)
+library(e1071)
+library(MLmetrics)
+library(haven)
+library(hrbrthemes)
+library(viridis)
+library(rpart.plot)
+```
+
+```{r, warning=FALSE, message=FALSE}
+set.seed(1, sample.kind = "Rounding")
+trainFileName = "adult.data"; testFileName = "adult.test"
+
+if (!file.exists (trainFileName))
+    download.file (
+      url = "http://archive.ics.uci.edu/ml/machine-learning-databases/adult/adult.data", 
+      destfile = trainFileName)
+
+if (!file.exists (testFileName))
+    download.file (
+      url = "http://archive.ics.uci.edu/ml/machine-learning-databases/adult/adult.test",
+      destfile = testFileName)
+colNames = c ("age", "workclass", "fnlwgt", "education", 
+              "educationnum", "maritalstatus", "occupation",
+              "relationship", "race", "sex", "capitalgain",
+              "capitalloss", "hoursperweek", "nativecountry",
+              "incomelevel")
+
+adult = read.table (trainFileName, header = FALSE, sep = ",",
+                       strip.white = TRUE, col.names = colNames,
+                        na.strings = "?", stringsAsFactors = TRUE)
+```
+
+```{r, warning=FALSE}
+str(adult)
+```
+
+The adult dataset contains **32561** rows and **15** variables, wich are:
+\begin{itemize}
+  \item age <int>: continuous.
+  \item workclass <Factor>: Private, Self-emp-not-inc, Self-emp-inc, Federal-gov, Local-gov, State-gov, Without-pay, Never-worked.
+  \item fnlwgt <int>: continuous.
+  \item education <Factor>: Bachelors, Some-college, 11th, HS-grad, Prof-school, Assoc-acdm, Assoc-voc, 9th, 7th-8th, 12th, Masters, 1st-4th, 10th, Doctorate, 5th-6th, Preschool.
+  \item educationnum <int>: continuous.
+  \item maritalstatus <Factor>: Married-civ-spouse, Divorced, Never-married, Separated, Widowed, Married-spouse-absent, Married-AF-spouse.
+  \item occupation <Factor>: Tech-support, Craft-repair, Other-service, Sales, Exec-managerial, Prof-specialty, Handlers-cleaners, Machine-op-inspct, Adm-clerical, Farming-fishing, Transport-moving, Priv-house-serv, Protective-serv, Armed-Forces.
+  \item relationship <Factor>: Wife, Own-child, Husband, Not-in-family, Other-relative, Unmarried.
+  \item race <Factor>: White, Asian-Pac-Islander, Amer-Indian-Eskimo, Other, Black.
+  \item sex <Factor>: Female, Male.
+  \item capitalgain <int>: continuous.
+  \item capitalloss <int>: continuous.
+  \item hoursperweek <int>: continuous.
+  \item nativecountry <Factor>: United-States, Cambodia, England, Puerto-Rico, Canada, Germany, Outlying-US(Guam-USVI-etc), India, Japan, Greece, South, China, Cuba, Iran, Honduras, Philippines, Italy, Poland, Jamaica, Vietnam, Mexico, Portugal, Ireland, France, Dominican-Republic, Laos, Ecuador, Taiwan, Haiti, Columbia, Hungary, Guatemala, Nicaragua, Scotland, Thailand, Yugoslavia, El-Salvador, Trinadad Tobago, Peru, Hong, Holand-Netherlands.
+  \item incomelevel <Factor>: >50K, <=50K.
+\end{itemize}
+
+**NA values**
+
+```{r, warning=FALSE}
+na_v <- sapply(adult, function(x) sum(is.na(x)))
+na_v
+```
+
+**Percentage of NA values**
+
+```{r}
+pna_v <- sapply(adult, function(adult){sum(is.na(adult)==T)*100/length(adult)})
+round(pna_v, digits = 3)
+```
+
+We can see that the variables ```workclass``` (**5.639%**),```occupation```(**5.660%**) and ```nativecountry```(**1.790%**) have NAs.
+Actually, this is not a good thing because these variables could be a very good predictors of income.
+
+So, we want to remove all the NAs from the dataset
+
+```{r, warning=FALSE}
+adult = adult[!is.na(adult$workclass) & !is.na(adult$occupation),]
+adult = adult[!is.na(adult$nativecountry),]
+adult$fnlwgt = NULL
+```
+
+## Data Analysis
+
+The variables/columns used in ```adult``` are:
+
+\begin{itemize}
+  \item age <int>
+  \item workclass <Factor>
+  \item education <Factor>
+  \item educationnum <int>
+  \item maritalstatus <Factor>
+  \item occupation <Factor>
+  \item relationship <Factor>
+  \item race <Factor>
+  \item sex <Factor>
+  \item capitalgain <int>
+  \item capitalloss <int>
+  \item hoursperweek <int>
+  \item nativecountry <Factor>
+\end{itemize}
+
+We want to see the distribution of income between the variables, we can plot it and see their behavior.
+
+In the next plot we see the frequency of ages in the database, with the condition of the income.
+
+```{r, warning=FALSE}
+adult %>%
+  ggplot(aes(age)) +
+  geom_histogram(aes(fill=incomelevel), binwidth = 0.5) +
+  theme_bw() + xlab("Age") + ylab("Frecuency") +
+  ggtitle("Frecuency of ages for income levels")
+```
+
+In the next plot, we graph the frequency of years of education with the condition of the level of income.
+
+We actually see that since 9 years of studying dedication, that is a high school degree, 
+the frequency of people who earns **<=50K** are the predominant. But also there is more frequency
+of people who earns **>50K** than 8 years of study or earlier.
+
+```{r, warning=FALSE}
+adult %>%
+  ggplot(aes(educationnum)) +
+  geom_histogram(aes(fill=incomelevel), binwidth = 0.5) +
+  scale_y_log10() + theme_bw() + 
+  xlab("Years of Education") + ylab("Frequency") +
+  ggtitle("Frecuency of years of education for income levels")
+```
+
+We can see that there is more frequency of people who works in a 40 hour job. And we can see that at every level, is more frequently to find people
+who earns less than 50k (**<=50K**)
+
+```{r, warning=FALSE}
+adult %>%
+  ggplot(aes(hoursperweek)) +
+  geom_histogram(aes(fill=incomelevel), binwidth = 2.5) + 
+  scale_y_log10() + theme_bw() + 
+  xlab("Hours per Week") + ylab("Frequency") +
+  ggtitle("Frecuency of hours per week for income levels")
+```
+
+If we want to see how much do people earn based on the country that they are from, we see that as the last plot, the behavior is very similar.
+At very level or country, we see that it is more common to see more people that earns less than 50k. (**<=50K**), but in the case of United States,
+we see that there is more people who earns more than 50k (**>50k**)
+
+```{r}
+adult %>%
+  ggplot(aes(x=reorder(nativecountry, nativecountry, function(x) length(x)))) +
+  geom_bar(aes(fill=incomelevel), width = 0.8, position = "identity") +
+  scale_y_log10() + theme_bw() + 
+  xlab("Native Country") + ylab("Frequency") +
+  ggtitle("Frecuency of countries for income levels") +
+  coord_flip()
+```
+
+## Variables for modeling
+
+After the initial data exploration, we want to select at least three variables for the income prediction.
+
+So, for the predictions, we are going to use the next variables:
+
+\begin{itemize}
+  \item age <int>
+  \item education <Factor>
+  \item occupation <Factor>
+  \item race <Factor>
+  \item sex <Factor>
+\end{itemize}
+
+## Methology for modeling
+
+We are going to use three models in this project, those are:
+\begin{itemize}
+  \item SVM (Support Vector Machine)
+  \item Decision Tree
+  \item Random Forest
+\end{itemize}
+
+For evaluating those models, we are going to use four metrics, those are:
+\begin{itemize}
+  \item Accuracy
+\[
+\frac{\text{true positives} + \text{true negatives}}{\text{true positives} + \text{false negatives} + \text{true negatives} + \text{true negatives}}
+\]
+  \item Sensitivity
+\[
+\frac{\text{true positives}}{\text{true positives} + \text{false negatives}}
+\]
+  \item Specificity
+\[
+\frac{\text{true negatives}}{\text{true negatives} + \text{false positives}}
+\]
+  \item F1 Score
+\[
+2 \times \frac{\text{precision} \times \text{recall}}{\text{precision} + \text{recall}}
+\]
+\end{itemize}
+
+The summary of the results with all the metrics are going to be in the results section.
+
+\newpage
+# Modeling
+
+For this project, we have to divide ```adult``` database into ```train_set``` and ```test_set```. ```train_set``` 
+is used to create all the models and ```test_set``` is used to prove how nice those models works.
+
+```{r}
+# Sample, train and test sets for the models
+sample.adult <- sample.split(adult$incomelevel, SplitRatio = 0.80)
+train_set = subset(adult, sample.adult == TRUE)
+test_set = subset(adult, sample.adult == FALSE)
+```
+
+## SVM (Support Vector Machine)
+
+This is a supervised model known as Support Vector Machine.
+
+This is a classification algorithm, with the objective of finding a 
+hyperplane that separates data points of one class from those of another class. Basically, this works on the principle of
+a maximum marginal classifier.
+\newline Source: [Math Works](https://www.mathworks.com/discovery/support-vector-machine.html)
+
+```{r}
+# Applying SVM Model
+svm.adult = svm(incomelevel ~
+                  age+education+occupation+race+sex,
+                data = train_set)
+# Prediction of data and Confusion Matrix
+test_set$pred.value = predict(svm.adult, newdata=test_set, type="response")
+model1 <- table(test_set$income, test_set$pred.value)
+confusionMatrix(model1)
+```
+
+```{r}
+F1_Score(test_set$income, test_set$pred.value)
+```
+
+We add the results of this model to a data frame.
+
+```{r}
+results<- data.frame(
+  Model="SVM (Support Vector Machine)",
+  Accuracy=
+    Accuracy(test_set$income, 
+             test_set$pred.value),
+  F1Score=
+    F1_Score(test_set$income,
+             test_set$pred.value),
+  Sensitivity=
+    sensitivity(test_set$income,
+                test_set$pred.value),
+  Specificity=
+    specificity(test_set$income,
+                test_set$pred.value))
+results
+```
+
+We can see that with this model we have a really good accuracy and a f1 score, but a little low specificity.
+
+## Decision Tree
+
+This model that we are going to apply in this case is a one step decision tree.
+This model is harder to interpret but has an accuracy a little better than the linear regression. It goes thru
+the different variables to see which bracked it ends.
+\newline Source: [Cran Project](https://cran.r-project.org/web/packages/OneR/index.html)
+
+
+```{r}
+# Applying Decision Tree Model
+detree <- rpart(incomelevel ~
+                  age+education+occupation+race+sex,
+                data = train_set)
+# Prediction of data and Confusion Matrix
+test_set$pred.value2 = predict(detree, newdata=test_set, type="class")
+model2 <- table(test_set$income, test_set$pred.value2)
+confusionMatrix(model2)
+```
+
+```{r}
+F1_Score(test_set$income, test_set$pred.value2)
+```
+
+```{r}
+results<- bind_rows(
+  results,
+  data.frame(Model="Decision Tree",
+             Accuracy=Accuracy(test_set$income,
+                               test_set$pred.value2),
+             F1Score=F1_Score(test_set$income,
+                              test_set$pred.value2),
+             Sensitivity=sensitivity(test_set$income,
+                                     test_set$pred.value2),
+             Specificity =specificity(test_set$income,
+                                      test_set$pred.value2)))
+results
+```
+
+In this case, we see that our specificity improved, we can try another model to see how it behave.
+
+## Random Forest
+
+This model consist of a large number of individual decision trees that operate as an ensemble.
+Each individual tree in the random forest splits out a class prediction and the class with the most votes becomes our model's prediction.
+\newline Source: [Towards Data Science](https://towardsdatascience.com/understanding-random-forest-58381e0602d2)
+
+```{r}
+set.seed(4543) # this is for reproducibility
+# Applying Random Forest Model
+rfmodel <- randomForest(incomelevel ~ 
+                          age+education+occupation+race+sex,
+                        data = train_set, importance = TRUE)
+# Prediction of data and Confusion Matrix
+test_set$pred.value3 = predict(rfmodel, newdata=test_set)
+model3 <- table(test_set$income, test_set$pred.value3)
+confusionMatrix(model3)
+```
+
+```{r}
+F1_Score(test_set$income, test_set$pred.value3)
+```
+
+```{r}
+results<- bind_rows(
+  results,
+  data.frame(Model="Random Forest",
+             Accuracy=Accuracy(test_set$income,
+                               test_set$pred.value3),
+             F1Score=F1_Score(test_set$income,
+                              test_set$pred.value3),
+             Sensitivity=sensitivity(test_set$income,
+                                     test_set$pred.value3),
+             Specificity =specificity(test_set$income,
+                                      test_set$pred.value3)))
+results
+```
+
+For this final model, we see that the specificity is a little lower too, but a really nice accuracy and f1 Score.
+
+\newpage
+# Results
+
+This is a summary of the results of all the models that we did before.
+\newline All of these models were trained on ```train_set``` (**80%** of adult database) and validated with ```test_set``` (**20%** of adult database).
+
+```{r}
+results
+```
+
+**Decision Tree** is the best model if we look at the ```F1 Score``` and the ```specificity```.
+\newline But, **Random Forest** is the best if we look at the ```accuracy``` and the ```sensitivity```.
+\newline In this case **SVM (Support Vector Machine)** had the lowest percentages in the indicators, being the worst among them.
+
+
+# Conclusion
+
+As a first step, we loaded de "Adult" or "Census+Income" database from the 1994.
+We split it into two parts, one for training (80%) and the other one for testing (20%).
+
+After the exploration we proceed to model the algorithms. 
+
+**Limitations**
+
+We actually used only three types of models, and this project can be used for a more rigorous machine learning project.
+
+**Future Work**
+
+As mentioned, this project can be used for a more rigorous machine learning project.
+\newline Other thing that can be done in the future is the database, this is from the 1994, 
+this kind of investigations can be very useful for reports and education sources for
+machine learning and data analysis for timelines analysis and predictions.
+\newline As well, the Specificity and the Sensitivity can be prioritize one or another based on
+the type of policy we want to make. And, considering the consequences of making one type of error or
+another, we'll know which type of error is more severe or costly than making the other type of error.
+We can make clear and choose what type of error(type 1 or 2) based on which one
+have more significance and power for the test.
+
+
+
+
+
+
