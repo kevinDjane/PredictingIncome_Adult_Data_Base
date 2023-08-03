@@ -6,6 +6,5 @@ With this dataset, our goal is to use at least two more complicated models that 
 For this project, we try to predict the **Income Level** with three models (SVM, Decision Tree and Random Forest) and four metrics (Accuracy, F1 Score, Sensitivity and Specificity) to evaluate our models.
 
 ## Important files in this repository
-1. `IncomePred_Capstone Project_Kevin Jané.R` is the Rscript where all important linecodes are stored.
-2. `IncomePred_Capstone Project_Kevin Jané.Rmd` is a R-markdown file that generates a final report.
-3. `IncomePred_Capstone Project_Kevin Jané.pdf` is the final report generated from the Rmd file for this project.
+1. `IncomePred_Capstone Project_Kevin Jané.Rmd` is a R-markdown file that generates a final report.
+2. `IncomePred_Capstone Project_Kevin Jané.pdf` is the final report generated from the Rmd file for this project.
