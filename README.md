@@ -8,3 +8,4 @@ For this project, we try to predict the **Income Level** with three models (SVM,
 ## Important files in this repository
 1. `IncomePred_Capstone Project_Kevin Jané.Rmd` is a R-markdown file that generates a final report.
 2. `IncomePred_Capstone Project_Kevin Jané.pdf` is the final report generated from the Rmd file for this project.
+3. `adult.csv` is the .CSV data used in this project.
